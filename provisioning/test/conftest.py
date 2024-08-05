@@ -46,7 +46,7 @@ def project_id():
 
 @pytest.fixture
 def region():
-    return os.environ.get("REGION", "us-central1")
+    return os.environ.get("REGION", "europe-west1")
 
 
 @pytest.fixture

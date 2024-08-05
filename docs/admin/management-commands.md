@@ -2,12 +2,11 @@
 
 ## Available Commands
 
-There are a number of [management commands](https://docs.djangoproject.com/en/stable/howto/custom-management-commands/) available in this application. The help text for each can be retrieved by using `python manage.py` and checking each command under `[store]`: 
-
+There are a number of [management commands](https://docs.djangoproject.com/en/stable/howto/custom-management-commands/) available in this application. The help text for each can be retrieved by using `python manage.py` and checking each command under `[store]`:
 
 ### Create a new product
 
-Used by the setup process. 
+Used by the setup process.
 
 ```
 $ python manage.py create_new_product --help
@@ -27,9 +26,9 @@ options:
 
 ### Create Site Config
 
-Allows for command-based site config updating. 
+Allows for command-based site config updating.
 
-Not actively used, instead, `demo_config.yaml` is loaded as a fixture. 
+Not actively used, instead, `demo_config.yaml` is loaded as a fixture.
 
 ```
 $ python manage.py create_site_config --help
@@ -51,8 +50,7 @@ options:
 
 ### Generate testimonials
 
-Used by setup process. By default, it will generate testimonals on all products in the database. 
-
+Used by setup process. By default, it will generate testimonals on all products in the database.
 
 ```
 $ python manage.py generate_testimonials --help
@@ -68,7 +66,7 @@ options:
 
 ### Update inventory count
 
-Updates the inventory for the current active product 
+Updates the inventory for the current active product
 
 ```
 $ python manage.py update_inventory_count --help
@@ -83,20 +81,20 @@ options:
 
 ## Running Commands
 
-These commands can be run adhoc by creating Cloud Run jobs referencing these commands. 
+These commands can be run adhoc by creating Cloud Run jobs referencing these commands.
 
-For example, your store gets 25 new pieces a day. You could setup a Cloud Run job that you can execute when you receive new stock. 
+For example, your store gets 25 new pieces a day. You could setup a Cloud Run job that you can execute when you receive new stock.
 
-You'd run the `update_inventory_count` command, with a value of 25. 
+You'd run the `update_inventory_count` command, with a value of 25.
 
 To set this up, create a job that runs the command as you would in the command line. The reference to `launcher` is an implementation of buildpacks ([see details](https://cloud.google.com/blog/topics/developers-practitioners/running-database-migrations-cloud-run-jobs))
 
 ```
 gcloud run jobs create update_inventory \
-    --image us-docker.pkg.dev/$PROJECT_ID/containers/server \
-    --region us-central1 \
+    --image europe-docker.pkg.dev/$PROJECT_ID/containers/server \
+    --region europe-west1 \
     --command launcher \
     --args "python manage.py update_inventory_count --add 25"
 ```
 
-Then, execute the job whenever you want to update the inventory. 
+Then, execute the job whenever you want to update the inventory.

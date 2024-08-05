@@ -32,4 +32,4 @@ steps:
 timeout: 1800s
 
 substitutions:
-  _REGION: us-central1
+  _REGION: europe-west1

@@ -1,0 +1,227 @@
+variables:
+  PROJECT_ID: gleephpro
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+.gcp:
+  image: gcr.io/google.com/cloudsdktool/google-cloud-cli:alpine
+  before_script:
+    - echo $SERVICE_ACCOUNT > /tmp/auth.json
+    - echo $BIG_QUERY_SERVICE_ACCOUNT > $CI_PROJECT_DIR/auth.json
+    - gcloud auth activate-service-account --key-file /tmp/auth.json
+    - gcloud config set project $PROJECT_ID
+
+  after_script:
+    - rm /tmp/auth.json
+    - rm $CI_PROJECT_DIR/auth.json
+
+.docker-gcp:
+  image:
+    name: docker:latest
+  before_script:
+    - docker version
+    - docker compose version
+    - apk upgrade --update-cache --available
+    - apk add openssl
+    - apk add curl python3 py-crcmod bash libc6-compat
+    - rm -rf /var/cache/apk/*
+    - curl https://sdk.cloud.google.com | bash > /dev/null
+    - export PATH=$PATH:/root/google-cloud-sdk/bin
+    - !reference [.gcp, before_script]
+
+  after_script:
+    - !reference [.gcp, after_script]
+
+  services:
+    - name: docker:dind
+      command: ["--tls=false"]
+
+test-api:
+  extends: .docker-gcp
+  stage: test
+  allow_failure: true
+  except:
+    - tags
+  script:
+    - cp .env-dist .env
+    - docker compose build gleephpro
+    - docker compose up -d gleephpro_db
+    - docker compose run --rm gleephpro coverage run manage.py test
+    - docker compose run --rm gleephpro coverage report
+    - docker compose run --rm gleephpro coverage html
+    - docker compose run --rm gleephpro coverage xml -o .cobertura/gleephpro.xml
+    - docker compose run --rm gleephpro coverage-badge -o coverage.svg
+    - gcloud storage cp coverage.svg gs://gleephpro-gitlab-assets/coverage/
+    - gcloud storage cp htmlcov/* gs://gleephpro-gitlab-assets/coverage/htmlcov/
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    paths: [.cobertura/gleephpro.xml]
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: .cobertura/gleephpro.xml
+
+validate_webapps_api:
+  extends: .docker-gcp
+  stage: test
+  except:
+    - tags
+  script:
+    - cp .env-dist .env
+    - docker compose build gleephpro
+    - docker compose up -d gleephpro_db
+    - docker compose run --rm webapps_api python manage.py makemigrations
+
+linter:
+  image: python:3.12.3-slim-bookworm
+  stage: test
+  allow_failure: true
+  needs: ["test-api"]
+  except:
+    - tags
+  script:
+    - pip install -r requirements-linter.txt
+    - black .
+    - ruff check .
+    - isort --check .
+
+graph_model:
+  image: python:3.12.3-slim-bookworm
+  allow_failure: yes
+  when: manual
+  script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends build-essential graphviz-dev graphviz
+    - pip install -r requirements-graph.txt
+    - cp .env-dist .env
+    - export $(cat .env-dist | xargs)
+    - python manage.py graph_models -a -X UUIDModel,TimeStampedModel,Creator -g -o model_graphs/full.png
+    - python manage.py graph_models -g onboarding accounts -X UUIDModel,TimeStampedModel,Creator -o model_graphs/onboarding.png
+    - python manage.py graph_models -g accounts contracts contracts_addons -X UUIDModel,TimeStampedModel,Creator -o model_graphs/contracts.png
+    - python manage.py graph_models -g top accounts -X UUIDModel,TimeStampedModel,Creator -o model_graphs/top.png
+    - python manage.py graph_models -g reports accounts -X UUIDModel,TimeStampedModel,Creator -o model_graphs/reports.png
+    - python manage.py graph_models -g book -o model_graphs/book.png
+
+  artifacts:
+    paths:
+      - model_graphs/full.png
+      - model_graphs/onboarding.png
+      - model_graphs/contracts.png
+      - model_graphs/top.png
+      - model_graphs/reports.png
+      - model_graphs/book.png
+
+docs:
+  image: python:3.12.3-slim-bookworm
+  allow_failure: yes
+  when: manual
+  script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends build-essential graphviz-dev graphviz fonts-roboto
+    - pip install -r docs/requirements.txt
+    - cd docs
+    - make html
+
+  artifacts:
+    paths:
+      - docs/_build/html/*
+
+###########################################################
+#
+#                  Gleeph Pro Deployment
+#
+###########################################################
+
+deploy dev api:
+  extends: .gcp
+  stage: deploy
+  when: manual
+  script:
+    - gcloud builds submit --config ci/gcp-build-api.yaml --substitutions _GCP_ENV=dev
+    - gcloud builds submit --config ci/gcp-deploy-api.yaml --substitutions _GCP_ENV=dev
+
+collect static dev:
+  extends: .gcp
+  stage: deploy
+  when: manual
+  needs: ["deploy dev api"]
+  script:
+    - gcloud builds submit --config ci/gcp-collect-static-api.yaml --substitutions _GCP_ENV=dev
+
+deploy preprod api:
+  extends: .gcp
+  stage: deploy
+  when: manual
+  only:
+    - /^preprod\/v\d+\.\d+\.\d+$/
+  except:
+    - branches
+  script:
+    - gcloud builds submit --config ci/gcp-build-api.yaml --substitutions _GCP_ENV=preprod
+    - gcloud builds submit --config ci/gcp-deploy-api.yaml --substitutions _GCP_ENV=preprod
+
+collect static preprod:
+  extends: .gcp
+  stage: deploy
+  when: manual
+  only:
+    - /^preprod\/v\d+\.\d+\.\d+$/
+  needs: ["deploy preprod api"]
+  script:
+    - gcloud builds submit --config ci/gcp-collect-static-api.yaml --substitutions _GCP_ENV=preprod
+
+deploy prod api:
+  extends: .gcp
+  stage: deploy
+  when: manual
+  only:
+    - /^prod\/v\d+\.\d+\.\d+$/
+  except:
+    - branches
+  script:
+    - gcloud builds submit --config ci/gcp-build-api.yaml --substitutions _GCP_ENV=prod
+    - gcloud builds submit --config ci/gcp-deploy-api.yaml --substitutions _GCP_ENV=prod
+
+collect static prod:
+  extends: .gcp
+  stage: deploy
+  when: manual
+  only:
+    - /^prod\/v\d+\.\d+\.\d+$/
+  needs: ["deploy prod api"]
+  script:
+    - gcloud builds submit --config ci/gcp-collect-static-api.yaml --substitutions _GCP_ENV=prod
+
+###########################################################
+#
+#                 Webapps API Deployment
+#
+###########################################################
+deploy webapps api preprod:
+  extends: .gcp
+  variables:
+    PROJECT_ID: "external-webapps"
+  stage: deploy
+  when: manual
+  only:
+    - /^webapps_api/preprod\/v\d+\.\d+\.\d+$/
+  except:
+    - branches
+  script:
+    - gcloud builds submit --config ci/webapps_api/gcp-build-api.yaml --substitutions _GCP_ENV=preprod
+    - gcloud builds submit --config ci/webapps_api/gcp-deploy-api.yaml --substitutions _GCP_ENV=preprod
+
+deploy webapps api prod:
+  extends: .gcp
+  variables:
+    PROJECT_ID: "external-webapps"
+  stage: deploy
+  when: manual
+  only:
+    - /^webapps_api/prod\/v\d+\.\d+\.\d+$/
+  except:
+    - branches
+  script:
+    - gcloud builds submit --config ci/webapps_api/gcp-build-api.yaml --substitutions _GCP_ENV=prod
+    - gcloud builds submit --config ci/webapps_api/gcp-deploy-api.yaml --substitutions _GCP_ENV=prod

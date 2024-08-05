@@ -27,7 +27,13 @@ steps:
   - id: build
     dir: cloud-builders-community/firebase
     name: gcr.io/cloud-builders/docker
-    args: ["build", "-t", "us-docker.pkg.dev/$PROJECT_ID/containers/firebase", "."]
+    args:
+      [
+        "build",
+        "-t",
+        "europe-docker.pkg.dev/$PROJECT_ID/containers/firebase",
+        ".",
+      ]
 
 images:
-  - us-docker.pkg.dev/$PROJECT_ID/containers/firebase
+  - europe-docker.pkg.dev/$PROJECT_ID/containers/firebase

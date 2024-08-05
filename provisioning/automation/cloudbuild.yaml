@@ -35,24 +35,22 @@ steps:
         "submit",
         "--config=$_CLOUDBUILD_CONFIG",
         "--timeout=1500",
-        "--project=$_CI_PROJECT"
+        "--project=$_CI_PROJECT",
       ]
-
 
   # Use Debian 11 Bullseye until Playwright supports Debian 12 Bookworm
   #   - https://playwright.dev/python/docs/intro#system-requirements
   - id: "test"
     name: python:3.12-bullseye
     dir: provisioning
-    env: 
-      - 'CI_PROJECT=$_CI_PROJECT'
+    env:
+      - "CI_PROJECT=$_CI_PROJECT"
     script: |
-        #!/bin/bash
+      #!/bin/bash
 
-        python -m pip install -r test/requirements.txt
-        playwright install --with-deps
-        python -m pytest
-
+      python -m pip install -r test/requirements.txt
+      playwright install --with-deps
+      python -m pytest
 
   - id: "cleanup"
     name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
@@ -74,7 +72,7 @@ serviceAccount: projects/${PROJECT_ID}/serviceAccounts/ci-serviceaccount@${PROJE
 
 substitutions:
   _KEEP_PROJECT: "false"
-  _REGION: us-central1
+  _REGION: europe-west1
   _SA_NAME: ci-serviceaccount
   _CI_PROJECT: "avocano-ephemeral-${BUILD_ID:0:8}"
   _CLOUDBUILD_CONFIG: provisioning/automation/deploy.cloudbuild.yaml

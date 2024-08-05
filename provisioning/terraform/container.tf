@@ -13,7 +13,7 @@ locals {
   # match values in setup.sh and cloudbuild.yaml
   server_image_name = "server"
   server_image_tag  = "latest"
-  registry_region   = "us"
+  registry_region   = "europe"
   registry_name     = "containers"
 
   # Formatted registry information

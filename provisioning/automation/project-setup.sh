@@ -44,7 +44,7 @@ if [[ -z $CI_PROJECT ]]; then
 fi
 
 if [[ -z $REGION ]]; then
-    REGION=us-central1
+    REGION=europe-west1
 fi
 
 SA_EMAIL=$(gcloud iam service-accounts list  --project ${PARENT_PROJECT} --filter $SA_NAME --format 'value(email)')

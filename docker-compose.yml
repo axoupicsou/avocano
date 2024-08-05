@@ -1,0 +1,59 @@
+services:
+  partons:
+    build:
+      context: .
+      dockerfile: docker/prod/Dockerfile
+      target: local
+      args:
+        REQUIREMENTS_FILE: requirements-dev.txt
+    container_name: partons
+    hostname: partons
+    volumes:
+      - .:/partons
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env
+    depends_on:
+      - partons_db
+    command: python manage.py runserver_plus 0.0.0.0:8000
+    networks:
+      - partons-net
+
+  partons_db:
+    build:
+      context: docker/db
+      args:
+        IMAGE: postgres:14.5
+    image: partons_db
+    container_name: partons_db
+    hostname: partons_db
+    volumes:
+      - local_postgres_data:/var/lib/postgresql/data:cached
+      - local_postgres_data_backups:/backups:cached
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_MULTIPLE_DATABASES: "partons,partons,partons"
+      POSTGRES_PASSWORD: partons
+    networks:
+      - partons-net
+    shm_size: 1GB
+
+  mailpit:
+    image: axllent/mailpit
+    logging:
+      driver: 'none'  # disable saving logs
+    ports:
+      - 1025:1025 # smtp server
+      - 8025:8025 # web ui
+    networks:
+      - partons-net
+
+networks:
+  partons-net:
+    driver: bridge
+
+volumes:
+  local_postgres_data: {}
+  local_postgres_data_backups: {}

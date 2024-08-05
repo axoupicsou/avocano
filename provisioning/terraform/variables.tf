@@ -5,7 +5,7 @@ variable "project_id" {
 
 # Customisable, but note some values may be hardcoded in docs, other configs. 
 variable "region" {
-  default     = "us-central1"
+  default     = "europe-west1"
   type        = string
   description = "Google Cloud Region"
 }

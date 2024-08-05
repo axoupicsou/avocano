@@ -20,12 +20,12 @@ steps:
     entrypoint: pack
     args:
       - build
-      - us-docker.pkg.dev/$PROJECT_ID/containers/$_IMAGE_NAME
+      - europe-docker.pkg.dev/$PROJECT_ID/containers/$_IMAGE_NAME
       - --builder=gcr.io/buildpacks/builder:v1
       - --path=server/
 
 images:
-  - us-docker.pkg.dev/$PROJECT_ID/containers/$_IMAGE_NAME
+  - europe-docker.pkg.dev/$PROJECT_ID/containers/$_IMAGE_NAME
 
 substitutions:
   _IMAGE_NAME: server

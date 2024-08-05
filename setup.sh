@@ -37,7 +37,7 @@ function quiet {
 
 echo "Configuring active project and region..."
 export PROJECT_ID=${PROJECT_ID:=$(gcloud config get project)}
-export REGION=${REGION:=us-central1} # default us-central1 region if not defined
+export REGION=${REGION:=europe-west1} # default europe-west1 region if not defined
 export PROJECTNUM=$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')
 export CURRENT_USER=$(gcloud config list account --format "value(core.account)")
 
