@@ -6,8 +6,8 @@
       {
         "source": "/api/**",
         "run": {
-          "serviceId": "server",
-          "region": "us-central1"
+          "serviceId": "server-6370",
+          "region": "europe-west1"
         }
       }
     ]
