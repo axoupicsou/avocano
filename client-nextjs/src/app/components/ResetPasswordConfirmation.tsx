@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { AuthActions } from "../auth/utils";
 import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense } from "react";
+
 type FormData = {
   password: string;
 };
 
-const ResetPasswordConfirmation = () => {
+const ResetPasswordConfirmationBounced = () => {
   const {
     register,
     handleSubmit,
@@ -23,7 +25,7 @@ const ResetPasswordConfirmation = () => {
 
   // Extract UID and Token from URL
   useEffect(() => {
-    if (searchParams.get("uid") && searchParams.get("token")) {
+    if (searchParams && searchParams.get("uid") && searchParams.get("token")) {
       setUid(searchParams.get("uid") as string);
       setToken(searchParams.get("token") as string);
     }
@@ -69,6 +71,14 @@ const ResetPasswordConfirmation = () => {
         </form>
       </div>
     </div>
+  );
+};
+
+const ResetPasswordConfirmation = () => {
+  return (
+    <Suspense>
+      <ResetPasswordConfirmationBounced />
+    </Suspense>
   );
 };
 

@@ -1,0 +1,36 @@
+steps:
+  # Build the container image
+  - name: gcr.io/cloud-builders/docker
+    args:
+      [
+        "build",
+        "-t",
+        "europe-docker.pkg.dev/$PROJECT_ID/containers/$_IMAGE_NAME",
+        ".",
+      ]
+
+  # Push the container image to Google Container Registry
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "europe-docker.pkg.dev/$PROJECT_ID/containers/$_IMAGE_NAME"]
+
+  # Deploy the container image to Cloud Run
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    args: [
+        gcloud
+        run
+        deploy
+        nextjs-app
+        --image
+        europe-docker.pkg.dev/$PROJECT_ID/containers/$_IMAGE_NAME
+        --platform
+        managed
+        --region
+        europe-west1
+        --allow-unauthenticated,
+      ]
+
+images:
+  - "europe-docker.pkg.dev/$PROJECT_ID/containers/$_IMAGE_NAME"
+
+substitutions:
+  _IMAGE_NAME: front

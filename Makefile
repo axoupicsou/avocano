@@ -14,10 +14,14 @@ update-db:
 update-api:
 	gcloud run services update server$(DEPLOY_SUFFIX) --image europe-docker.pkg.dev/$(PROJECT_ID)/containers/server --region $(REGION)
 
+.PHONY : update-front-firebase
+update-front-firebase:
+	cd client && npm run build
+	cd client && firebase deploy --project $(PROJECT_ID) --only hosting
+
 .PHONY : update-front
 update-front:
-	cd client-nextjs && npm run build
-	cd client-nextjs && firebase deploy --project $(PROJECT_ID) --only hosting
+	cd client-nextjs && gcloud builds submit --config cloudbuild.yaml .
 
 .PHONY: deploy
 deploy : build-image update-db update-api update-front
